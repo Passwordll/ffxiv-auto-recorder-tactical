@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFXIV Raid Analyzer Pro - Wipe Manager</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+        h1 {
+            color: #00FFFF;
+            margin-bottom: 5px;
+        }
+        .subtitulo {
+            color: #888;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        
+        /* CONTENEDOR PRINCIPAL GRANDE */
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 1300px;
+        }
+
+        /* GRID DE VIDEOS */
+        .grid-videos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            gap: 25px;
+            width: 100%;
+        }
+        .contenedor-video {
+            background-color: #1E1E1E;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+            text-align: center;
+            border: 1px solid #333;
+        }
+        video {
+            width: 100%;
+            display: block;
+            border-radius: 6px;
+            background: #000;
+            margin-top: 10px;
+            cursor: zoom-in;
+        }
+        
+        /* MAXIMIZADO LIMPIO */
+        video.maximizado {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            object-fit: contain;
+            background-color: #0a0a0a;
+            margin: 0;
+            padding: 0;
+            cursor: zoom-out;
+            border-radius: 0;
+        }
+
+        /* 🚨 NUEVA SECCIÓN DE WIPES (HISTORIAL) 🚨 */
+        .seccion-wipes {
+            background-color: #1E1E1E;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 10px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+        }
+        .seccion-wipes h2 {
+            color: #FF5555;
+            margin-top: 0;
+            font-size: 18px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+        .lista-wipes {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .item-wipe {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: #252525;
+            padding: 8px 15px;
+            border-radius: 6px;
+            border-left: 4px solid #FF5555;
+        }
+        .btn-ir-wipe {
+            background-color: #FF5555;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-ir-wipe:hover {
+            background-color: #D44444;
+        }
+        .input-nota {
+            background-color: #121212;
+            border: 1px solid #444;
+            color: white;
+            padding: 6px;
+            border-radius: 4px;
+            flex-grow: 1;
+            font-size: 13px;
+        }
+        .input-nota:focus {
+            border-color: #00FFFF;
+            outline: none;
+        }
+
+        .controles-locales {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-mini {
+            background-color: #333;
+            color: #00FFFF;
+            border: 1px solid #00FFFF;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-mini:hover {
+            background-color: #00FFFF;
+            color: #121212;
+        }
+
+        /* BARRA MAESTRA COMPACTA */
+        .controles-maestros {
+            position: fixed;
+            bottom: 20px;
+            background-color: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(5px);
+            padding: 8px 25px;
+            border-radius: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            z-index: 100000;
+            transition: all 0.3s ease;
+        }
+        body.modo-cine .controles-maestros {
+            opacity: 0;
+            transform: translateY(100px);
+        }
+        body.modo-cine .controles-maestros:hover,
+        body.modo-cine:hover .controles-maestros {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        button.btn-master {
+            background-color: #00FFFF;
+            color: #121212;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button.btn-master:hover {
+            background-color: #00CCCC;
+        }
+        button.btn-master.btn-pausa {
+            background-color: #FF5555;
+            color: white;
+        }
+        button.btn-master.btn-pausa:hover {
+            background-color: #D44444;
+        }
+        button.btn-master.btn-wipe-add {
+            background-color: #FFB300;
+            color: #121212;
+        }
+        button.btn-master.btn-wipe-add:hover {
+            background-color: #E6A100;
+        }
+        .tiempo-display {
+            font-family: monospace;
+            font-size: 14px;
+            color: #00FF00;
+        }
+        select {
+            background-color: #222;
+            color: #fff;
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            padding: 5px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .input-file-custom {
+            background-color: #2a2a2a;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #ccc;
+        }
+        .aviso-zoom {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎮 RAID ANALYZER TACTICAL</h1>
+    <div class="subtitulo">Doble clic para pantalla completa | Presiona 'W' o el botón naranja para marcar un wipe</div>
+
+    <div class="workspace">
+        <div class="grid-videos">
+            <div class="contenedor-video">
+                <input type="file" id="file1" accept="video/*" class="input-file-custom">
+                <video id="player1" muted></video> 
+                <div class="tiempo-display">POV 1: <span id="timePOV1">0.0</span>s</div>
+            </div>
+            
+            <div class="contenedor-video">
+                <input type="file" id="file2" accept="video/*" class="input-file-custom">
+                <video id="player2" muted></video>
+                <div class="tiempo-display">POV 2: <span id="timePOV2">0.0</span>s</div>
+                <div class="controles-locales">
+                    <button class="btn-mini" id="delayMenos">⏰ -0.5s</button>
+                    <button class="btn-mini" id="delayMas">⏰ +0.5s</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="seccion-wipes">
+            <h2>📊 Historial de Secciones / Wipes Registrados</h2>
+            <div class="lista-wipes" id="listaWipesContainer">
+                <div style="color: #666; font-style: italic;" id="txtVacio">No has registrado ningún wipe todavía.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controles-maestros">
+        <button class="btn-master" id="btnPlay">▶️ PLAY</button>
+        <button class="btn-master" id="btnPause" class="btn-pausa">⏸️ PAUSA</button>
+        <button class="btn-master" id="btnAtras">↩️ REPETIR (-5s)</button>
+        
+        <button class="btn-master btn-wipe-add" id="btnRegistrarWipe">🚩 REGISTRAR WIPE</button>
+        
+        <select id="selectSpeed">
+            <option value="0.25">🐢 0.25x</option>
+            <option value="0.5" selected>🐢 0.50x</option>
+            <option value="1.0">⚡ 1.00x</option>
+            <option value="1.5">⚡ 1.50x</option>
+        </select>
+
+        <div class="tiempo-display">MTR: <span id="txtTiempo">0.00</span>s</div>
+    </div>
+
+    <script>
+        const p1 = document.getElementById('player1');
+        const p2 = document.getElementById('player2');
+        const body = document.body;
+        
+        const btnPlay = document.getElementById('btnPlay');
+        const btnPause = document.getElementById('btnPause');
+        const btnAtras = document.getElementById('btnAtras');
+        const btnRegistrarWipe = document.getElementById('btnRegistrarWipe');
+        const listaWipesContainer = document.getElementById('listaWipesContainer');
+        const txtVacio = document.getElementById('txtVacio');
+        
+        const txtTiempo = document.getElementById('txtTiempo');
+        const timePOV1 = document.getElementById('timePOV1');
+        const timePOV2 = document.getElementById('timePOV2');
+        const selectSpeed = document.getElementById('selectSpeed');
+        
+        const file1 = document.getElementById('file1');
+        const file2 = document.getElementById('file2');
+
+        let video2Delay = 0;
+        let contadorWipes = 0;
+
+        file1.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) p1.src = URL.createObjectURL(file);
+        });
+        file2.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) p2.src = URL.createObjectURL(file);
+        });
+
+        p1.muted = p2.muted = true;
+
+        // ZOOM CONTROL
+        p1.addEventListener('dblclick', () => { p1.classList.toggle('maximizado'); body.classList.toggle('modo-cine'); });
+        p2.addEventListener('dblclick', () => { p2.classList.toggle('maximizado'); body.classList.toggle('modo-cine'); });
+
+        // 🚨 LÓGICA PARA AGREGAR CAPÍTULOS / WIPES 🚨
+        function agregarWipe() {
+            // Ocultar el mensaje de vacío la primera vez
+            if (contadorWipes === 0) {
+                txtVacio.style.display = 'none';
+            }
+            
+            contadorWipes++;
+            const tiempoActualP1 = p1.currentTime;
+            
+            // Creamos la estructura HTML del wipe al vuelo
+            const item = document.createElement('div');
+            item.className = 'item-wipe';
+            
+            // Guardamos el tiempo exacto en un atributo interno del botón
+            item.innerHTML = `
+                <button class="btn-ir-wipe" data-tiempo="${tiempoActualP1}">Ir a Wipe ${contadorWipes}</button>
+                <div class="tiempo-display" style="color: #aaa;">Estampa: ${tiempoActualP1.toFixed(1)}s</div>
+                <input type="text" class="input-nota" placeholder="Añadir notas del error (Ej. Falla en mecánicas, mitigación corta...)">
+            `;
+            
+            // Añadir funcionalidad al botón que acabamos de crear
+            item.querySelector('.btn-ir-wipe').addEventListener('click', function() {
+                const tiempoWipe = parseFloat(this.getAttribute('data-tiempo'));
+                
+                // Restamos 8 segundos automáticamente antes del wipe para ver el origen del error
+                const tiempoSeguro = Math.max(0, tiempoWipe - 8);
+                
+                p1.currentTime = tiempoSeguro;
+                p2.currentTime = tiempoSeguro + video2Delay;
+                
+                // Pausamos para que analicen el cuadro inicial
+                p1.pause();
+                p2.pause();
+            });
+
+            // Meterlo a la lista visual
+            listaWipesContainer.appendChild(item);
+            // Auto-scroll al último wipe añadido
+            listaWipesContainer.scrollTop = listaWipesContainer.scrollHeight;
+        }
+
+        // Evento clic del botón naranja
+        btnRegistrarWipe.addEventListener('click', agregarWipe);
+
+        // Atajo de teclado: Si presionas la tecla 'W' (Wipe) en cualquier momento se registra solo
+        window.addEventListener('keydown', (e) => {
+            // Evitar activar el atajo si están escribiendo en las notas
+            if (document.activeElement.tagName === 'INPUT') return;
+            
+            if (e.key.toLowerCase() === 'w') {
+                agregarWipe();
+            }
+        });
+
+        // PLAY MAESTRO
+        btnPlay.addEventListener('click', () => {
+            p2.currentTime = p1.currentTime + video2Delay;
+            p1.playbackRate = p2.playbackRate = parseFloat(selectSpeed.value);
+            p1.play();
+            p2.play();
+        });
+
+        // PAUSA MAESTRA
+        btnPause.addEventListener('click', () => {
+            p1.pause();
+            p2.pause();
+            p2.currentTime = p1.currentTime + video2Delay; 
+        });
+
+        // REPETIR JUGADA
+        btnAtras.addEventListener('click', () => {
+            p1.currentTime = Math.max(0, p1.currentTime - 5);
+            p2.currentTime = Math.max(0, p1.currentTime + video2Delay);
+        });
+
+        // CAMBIAR VELOCIDAD
+        selectSpeed.addEventListener('change', function() {
+            p1.playbackRate = p2.playbackRate = parseFloat(this.value);
+        });
+
+        // CONTROLES DE DESFASE
+        document.getElementById('delayMas').addEventListener('click', () => { video2Delay += 0.5; p2.currentTime = p1.currentTime + video2Delay; });
+        document.getElementById('delayMenos').addEventListener('click', () => { video2Delay -= 0.5; p2.currentTime = p1.currentTime + video2Delay; });
+
+        // MONITOR DE TIEMPOS
+        p1.addEventListener('timeupdate', () => {
+            txtTiempo.textContent = p1.currentTime.toFixed(2);
+            timePOV1.textContent = p1.currentTime.toFixed(1);
+        });
+        p2.addEventListener('timeupdate', () => {
+            timePOV2.textContent = p2.currentTime.toFixed(1);
+        });
+    </script>
+</body>
+</html>

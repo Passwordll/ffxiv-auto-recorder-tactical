@@ -1,0 +1,12 @@
+# Evitar subir los videos de raid de OBS
+*.mp4
+*.mkv
+
+# Ocultar carpetas de PyInstaller (el ejecutable que creamos)
+build/
+dist/
+*.spec
+
+# Archivos temporales de Python y config local
+__pycache__/
+*.pyc
